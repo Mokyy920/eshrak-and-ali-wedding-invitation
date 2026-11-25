@@ -181,7 +181,7 @@
     <button type="button" class="slide-dot" data-jump="0.44" title="Save the Date"></button>
     <button type="button" class="slide-dot" data-jump="0.61" title="Location"></button>
     <button type="button" class="slide-dot" data-jump="0.78" title="Countdown"></button>
-    <button type="button" class="slide-dot" data-jump="0.96" title="Wishes"></button>
+    <button type="button" class="slide-dot" data-jump="0.96" title="RSVP"></button>
   </aside>
 
   <!-- Minimal Bottom-Right Music Toggle -->
@@ -332,22 +332,48 @@
         </div>
       </section>
 
-      <!-- SLIDE 6: Frameless Guest Wishes Slide -->
+      <!-- SLIDE 6: Frameless RSVP Attendance Confirmation Slide -->
       <section id="scene-6" class="scene-layer z-30 text-center">
-        <div id="scene-6-inner" class="w-full max-w-lg px-4 will-change-transform">
-          <p class="font-engraved text-[11px] tracking-[0.4em] uppercase text-[#e6d3b3]/85 mb-2">Guestbook</p>
-          <h2 class="font-calligraphy text-6xl sm:text-7xl text-[#faf7f2] leading-none">Warm Wishes</h2>
-          <p class="font-editorial italic text-lg text-[#d5cdc0] mt-1">Leave a note of love for Eshrak &amp; Ali</p>
+        <div id="scene-6-inner" class="w-full max-w-md px-4 pr-7 sm:pr-4 will-change-transform">
+          <div id="rsvp-header">
+            <h2 class="font-calligraphy text-6xl sm:text-7xl text-[#faf7f2] leading-none">Kindly Reply</h2>
+            <p class="font-editorial italic text-lg text-[#d5cdc0] mt-1">Will you be celebrating with Eshrak &amp; Ali?</p>
+          </div>
 
-          <form id="wish-form" class="mt-6 space-y-4 text-left pr-5 sm:pr-0">
-            <input id="wish-name" type="text" maxlength="40" placeholder="Your name" required class="minimal-input w-full" />
-            <input id="wish-msg" type="text" maxlength="140" placeholder="Write your wish..." required class="minimal-input w-full" />
+          <form id="rsvp-form" class="mt-6 space-y-4 text-left">
+            <input id="rsvp-name" type="text" maxlength="50" placeholder="Your full name" required class="minimal-input w-full" />
+
+            <div class="grid grid-cols-2 gap-2.5 pt-1" role="group" aria-label="Attendance choice">
+              <button type="button" id="btn-accept" data-status="Attending" class="rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3] bg-[#e6d3b3] text-[#030d09] font-engraved text-[10px] tracking-[0.18em] uppercase transition cursor-pointer">
+                Joyfully Accepts
+              </button>
+              <button type="button" id="btn-decline" data-status="Not Attending" class="rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3]/40 text-[#faf7f2]/85 font-engraved text-[10px] tracking-[0.18em] uppercase hover:border-[#e6d3b3] transition cursor-pointer">
+                Regretfully Declines
+              </button>
+            </div>
+
+            <div id="guests-row" class="flex items-center justify-between border-b border-[#e6d3b3]/35 pb-2 pt-1">
+              <label for="rsvp-guests" class="text-xs font-light tracking-wide text-[#d5cdc0]">Number of Guests</label>
+              <select id="rsvp-guests" class="bg-transparent text-[#e6d3b3] font-engraved text-xs tracking-widest focus:outline-none cursor-pointer">
+                <option value="1" class="bg-[#04110b] text-[#faf7f2]">1 Guest</option>
+                <option value="2" class="bg-[#04110b] text-[#faf7f2]">2 Guests</option>
+                <option value="3" class="bg-[#04110b] text-[#faf7f2]">3 Guests</option>
+                <option value="4" class="bg-[#04110b] text-[#faf7f2]">4 Guests</option>
+                <option value="5+" class="bg-[#04110b] text-[#faf7f2]">5+ Guests</option>
+              </select>
+            </div>
+
             <div class="pt-2 text-center">
-              <button type="submit" class="w-full sm:w-auto px-7 py-2.5 rounded-full border border-[#e6d3b3]/55 text-[#e6d3b3] font-engraved text-[11px] tracking-[0.2em] uppercase hover:bg-[#e6d3b3] hover:text-[#030d09] transition cursor-pointer">Send</button>
+              <button type="submit" id="rsvp-submit-btn" class="w-full sm:w-auto px-8 py-2.5 rounded-full border border-[#e6d3b3]/60 text-[#e6d3b3] font-engraved text-[11px] tracking-[0.22em] uppercase hover:bg-[#e6d3b3] hover:text-[#030d09] transition cursor-pointer">
+                Confirm Attendance
+              </button>
             </div>
           </form>
 
-          <div id="wish-list" class="mt-6 max-h-36 overflow-y-auto space-y-3 pr-1 text-left"></div>
+          <div id="rsvp-confirmation" class="hidden mt-7 space-y-3">
+            <p id="rsvp-confirm-title" class="font-editorial italic text-2xl text-[#e6d3b3]"></p>
+            <p id="rsvp-confirm-sub" class="text-xs font-light tracking-wide text-[#d5cdc0]"></p>
+          </div>
 
           <div class="hairline w-32 mx-auto mt-7 mb-4"></div>
           <p class="font-engraved text-[10px] tracking-[0.34em] uppercase text-[#e6d3b3]/75">
@@ -668,78 +694,87 @@
       updateCountdown();
       setInterval(updateCountdown, 1000);
 
-      // Shared Public Guestbook (Google Sheets Apps Script API + local fallback)
-      // Paste your deployed Google Apps Script Web App URL below to share wishes across all guests:
-      const GUESTBOOK_API_URL = 'https://script.google.com/macros/s/AKfycbzOmL8VU1O0Wydt6YTqJ1TvMq0-hyppX0jOXhJJeeW_F9GcSaU6oiC03xQymWBZw4vb1A/exec';
-      const STORAGE_KEY = 'ea_wedding_wishes_v2';
-      let wishes = [
-        { name: 'With Love', msg: 'Wishing Eshrak & Ali a lifetime of joy and endless love.' }
-      ];
+      // RSVP Attendance Confirmation (Google Sheets Apps Script API + local fallback)
+      const RSVP_API_URL = 'https://script.google.com/macros/s/AKfycbzOmL8VU1O0Wydt6YTqJ1TvMq0-hyppX0jOXhJJeeW_F9GcSaU6oiC03xQymWBZw4vb1A/exec';
+      const RSVP_STORAGE_KEY = 'ea_wedding_rsvp_v1';
+
+      const rsvpForm = document.getElementById('rsvp-form');
+      const rsvpName = document.getElementById('rsvp-name');
+      const rsvpGuests = document.getElementById('rsvp-guests');
+      const guestsRow = document.getElementById('guests-row');
+      const rsvpConfirm = document.getElementById('rsvp-confirmation');
+      const rsvpConfirmTitle = document.getElementById('rsvp-confirm-title');
+      const rsvpConfirmSub = document.getElementById('rsvp-confirm-sub');
+      const btnAccept = document.getElementById('btn-accept');
+      const btnDecline = document.getElementById('btn-decline');
+
+      let attendanceStatus = 'Attending';
+
+      function setAttendanceChoice(status) {
+        attendanceStatus = status;
+        const isAccept = status === 'Attending';
+        btnAccept.className = isAccept
+          ? 'rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3] bg-[#e6d3b3] text-[#030d09] font-engraved text-[10px] tracking-[0.18em] uppercase transition cursor-pointer'
+          : 'rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3]/40 text-[#faf7f2]/85 font-engraved text-[10px] tracking-[0.18em] uppercase hover:border-[#e6d3b3] transition cursor-pointer';
+        btnDecline.className = !isAccept
+          ? 'rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3] bg-[#e6d3b3] text-[#030d09] font-engraved text-[10px] tracking-[0.18em] uppercase transition cursor-pointer'
+          : 'rsvp-choice px-3 py-2.5 rounded-full border border-[#e6d3b3]/40 text-[#faf7f2]/85 font-engraved text-[10px] tracking-[0.18em] uppercase hover:border-[#e6d3b3] transition cursor-pointer';
+        guestsRow.classList.toggle('hidden', !isAccept);
+      }
+
+      btnAccept.addEventListener('click', () => setAttendanceChoice('Attending'));
+      btnDecline.addEventListener('click', () => setAttendanceChoice('Not Attending'));
+
+      const rsvpHeader = document.getElementById('rsvp-header');
+      function showConfirmation(data) {
+        if (rsvpHeader) rsvpHeader.classList.add('hidden');
+        rsvpForm.classList.add('hidden');
+        rsvpConfirm.classList.remove('hidden');
+        if (data.attending === 'Attending') {
+          rsvpConfirmTitle.textContent = `Thank you, ${data.name}`;
+          rsvpConfirmSub.textContent = `Confirmed for ${data.guests} ${data.guests === '1' ? 'guest' : 'guests'} on 26.12.2026 at Sonesta Hotel, Nasr City.`;
+        } else {
+          rsvpConfirmTitle.textContent = `We will miss you, ${data.name}`;
+          rsvpConfirmSub.textContent = 'Thank you for letting Eshrak & Ali know.';
+        }
+      }
+
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) wishes = JSON.parse(saved);
+        const savedRsvp = localStorage.getItem(RSVP_STORAGE_KEY);
+        if (savedRsvp) {
+          const parsed = JSON.parse(savedRsvp);
+          if (parsed && parsed.name) showConfirmation(parsed);
+        }
       } catch {}
 
-      const wishList = document.getElementById('wish-list');
-      function renderWishes() {
-        wishList.innerHTML = '';
-        wishes.slice().reverse().forEach((w) => {
-          const row = document.createElement('div');
-          row.className = 'border-b border-[#e6d3b3]/15 pb-2.5';
-          const author = document.createElement('p');
-          author.className = 'font-engraved text-[10px] tracking-[0.2em] uppercase text-[#e6d3b3]';
-          author.textContent = w.name;
-          const body = document.createElement('p');
-          body.className = 'font-editorial italic text-base text-[#faf7f2]/90 mt-0.5';
-          body.textContent = w.msg;
-          row.appendChild(author);
-          row.appendChild(body);
-          wishList.appendChild(row);
-        });
-      }
-      renderWishes();
-
-      async function loadSharedWishes() {
-        if (!GUESTBOOK_API_URL) return;
-        try {
-          const res = await fetch(GUESTBOOK_API_URL);
-          if (!res.ok) return;
-          const data = await res.json();
-          if (Array.isArray(data) && data.length) {
-            wishes = data.filter((x) => x && x.name && x.msg);
-            renderWishes();
-          }
-        } catch {}
-      }
-      loadSharedWishes();
-
-      document.getElementById('wish-form').addEventListener('submit', async (e) => {
+      rsvpForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const nameInput = document.getElementById('wish-name');
-        const msgInput = document.getElementById('wish-msg');
-        const name = nameInput.value.trim();
-        const msg = msgInput.value.trim();
-        if (!name || !msg) return;
+        const name = rsvpName.value.trim();
+        if (!name) return;
+        const payload = {
+          name,
+          attending: attendanceStatus,
+          guests: attendanceStatus === 'Attending' ? rsvpGuests.value : '0',
+          note: ''
+        };
 
-        wishes.push({ name, msg });
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(wishes)); } catch {}
-        nameInput.value = '';
-        msgInput.value = '';
-        renderWishes();
+        try { localStorage.setItem(RSVP_STORAGE_KEY, JSON.stringify(payload)); } catch {}
+        showConfirmation(payload);
 
-        if (GUESTBOOK_API_URL) {
+        if (RSVP_API_URL) {
           try {
-            await fetch(GUESTBOOK_API_URL, {
+            await fetch(RSVP_API_URL, {
               method: 'POST',
+              mode: 'no-cors',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ name, msg })
+              body: JSON.stringify(payload)
             });
-            showToast('Your wish has been shared with everyone');
+            showToast('Your RSVP has been recorded');
           } catch {
-            showToast('Saved locally — please check your connection');
+            showToast('Saved on device — please check your connection');
           }
         } else {
-          showToast('Thank you for your warm wish');
+          showToast('Thank you — your response is confirmed');
         }
       });
 
