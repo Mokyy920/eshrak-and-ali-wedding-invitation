@@ -373,6 +373,12 @@
           <div id="rsvp-confirmation" class="hidden mt-7 space-y-3">
             <p id="rsvp-confirm-title" class="font-editorial italic text-2xl text-[#e6d3b3]"></p>
             <p id="rsvp-confirm-sub" class="text-xs font-light tracking-wide text-[#d5cdc0]"></p>
+            <button type="button" id="rsvp-edit-btn" class="mt-2 text-[10px] font-engraved tracking-[0.22em] uppercase text-[#e6d3b3]/85 underline underline-offset-4 hover:text-[#faf7f2] cursor-pointer">
+              Update Response
+            </button>
+            <p id="rsvp-locked-note" class="hidden text-[11px] font-light tracking-wide text-[#d5cdc0]/75">
+              Response updates are closed within 1 week of the wedding.
+            </p>
           </div>
 
           <div class="hairline w-32 mx-auto mt-7 mb-4"></div>
@@ -762,7 +768,7 @@
       setInterval(updateCountdown, 1000);
 
       // RSVP Attendance Confirmation (Google Sheets Apps Script API + local fallback)
-      const RSVP_API_URL = 'https://script.google.com/macros/s/AKfycbzOmL8VU1O0Wydt6YTqJ1TvMq0-hyppX0jOXhJJeeW_F9GcSaU6oiC03xQymWBZw4vb1A/exec';
+      const RSVP_API_URL = 'https://script.google.com/macros/s/AKfycbyRraqJMl0kefX5yLVNv7JgBBgiAXJM3YAyw5HfA91rLzhENlNjCYDtoPbiD_3LOv6jaA/exec';
       const RSVP_STORAGE_KEY = 'ea_wedding_rsvp_v1';
 
       const rsvpForm = document.getElementById('rsvp-form');
@@ -793,6 +799,28 @@
       btnDecline.addEventListener('click', () => setAttendanceChoice('Not Attending'));
 
       const rsvpHeader = document.getElementById('rsvp-header');
+      const rsvpEditBtn = document.getElementById('rsvp-edit-btn');
+      const rsvpLockedNote = document.getElementById('rsvp-locked-note');
+      const RSVP_LOCK_TIME = new Date('2026-12-19T19:30:00+02:00').getTime(); // 1 week before wedding
+
+      function updateEditAvailability() {
+        const isLocked = Date.now() >= RSVP_LOCK_TIME;
+        if (rsvpEditBtn) rsvpEditBtn.classList.toggle('hidden', isLocked);
+        if (rsvpLockedNote) rsvpLockedNote.classList.toggle('hidden', !isLocked);
+      }
+
+      if (rsvpEditBtn) {
+        rsvpEditBtn.addEventListener('click', () => {
+          if (Date.now() >= RSVP_LOCK_TIME) {
+            updateEditAvailability();
+            return;
+          }
+          rsvpConfirm.classList.add('hidden');
+          if (rsvpHeader) rsvpHeader.classList.remove('hidden');
+          rsvpForm.classList.remove('hidden');
+        });
+      }
+
       function showConfirmation(data) {
         if (rsvpHeader) rsvpHeader.classList.add('hidden');
         rsvpForm.classList.add('hidden');
@@ -804,6 +832,7 @@
           rsvpConfirmTitle.textContent = `We will miss you, ${data.name}`;
           rsvpConfirmSub.textContent = 'Thank you for letting Eshrak & Ali know.';
         }
+        updateEditAvailability();
       }
 
       try {
