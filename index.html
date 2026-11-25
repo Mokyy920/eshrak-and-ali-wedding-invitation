@@ -83,8 +83,13 @@
       align-items: center;
       justify-content: center;
       padding: 2rem 1.5rem;
+      opacity: 0;
       pointer-events: none;
       will-change: transform, opacity;
+    }
+    #scene-1 {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .scene-layer.interactive {
@@ -109,7 +114,6 @@
       border-radius: 8px;
       mask-image: radial-gradient(ellipse 76% 74% at 50% 52%, rgba(0, 0, 0, 1) 52%, rgba(0, 0, 0, 0.72) 74%, transparent 98%);
       -webkit-mask-image: radial-gradient(ellipse 76% 74% at 50% 52%, rgba(0, 0, 0, 1) 52%, rgba(0, 0, 0, 0.72) 74%, transparent 98%);
-      filter: contrast(1.06) saturate(0.95);
     }
 
     /* Frameless Minimal Underline Inputs */
@@ -389,33 +393,56 @@
       shoeCanvas.width = 480;
       shoeCanvas.height = 370;
 
-      const loadedFrames = [];
+      const loadedFrames = new Array(SHOE_FRAMES.length).fill(null);
       let lastDrawnFrame = -1;
       SHOE_FRAMES.forEach((src, i) => {
         const img = new Image();
-        img.src = src;
-        if (i === 0) {
-          img.onload = () => {
-            if (lastDrawnFrame === -1) {
+        img.decoding = 'async';
+        img.onload = () => {
+          if (typeof createImageBitmap === 'function') {
+            createImageBitmap(img).then((bmp) => {
+              loadedFrames[i] = bmp;
+              if (i === 0 && lastDrawnFrame === -1) {
+                shoeCtx.drawImage(bmp, 0, 0, 480, 370);
+                lastDrawnFrame = 0;
+              }
+            }).catch(() => {
+              loadedFrames[i] = img;
+            });
+          } else {
+            loadedFrames[i] = img;
+            if (i === 0 && lastDrawnFrame === -1) {
               shoeCtx.drawImage(img, 0, 0, 480, 370);
               lastDrawnFrame = 0;
             }
-          };
-        }
-        loadedFrames.push(img);
+          }
+        };
+        img.src = src;
       });
+
+      // Auto-playing 24fps clip triggered upon scrolling from Slide 1
+      let clipState = 'idle'; // 'idle' | 'playing' | 'done'
+      let clipStartTime = 0;
+      let clipProgress = 0;
+      const CLIP_DURATION_MS = 3250; // 78 frames @ 24fps
 
       function drawShoeFrame(progress) {
         if (!loadedFrames.length) return;
         const idx = Math.min(loadedFrames.length - 1, Math.max(0, Math.round(progress * (loadedFrames.length - 1))));
         if (idx === lastDrawnFrame) return;
-        const img = loadedFrames[idx];
-        if (img && img.complete && img.naturalWidth > 0) {
-          shoeCtx.clearRect(0, 0, 480, 370);
-          shoeCtx.drawImage(img, 0, 0, 480, 370);
+        const frame = loadedFrames[idx];
+        if (frame) {
+          shoeCtx.drawImage(frame, 0, 0, 480, 370);
           lastDrawnFrame = idx;
         }
       }
+
+      shoeCanvas.style.cursor = 'pointer';
+      shoeCanvas.addEventListener('click', () => {
+        clipState = 'playing';
+        clipStartTime = performance.now();
+        clipProgress = 0;
+      });
 
       // Scroll State
       let targetP = 0;
@@ -499,20 +526,38 @@
         scene1.style.transform = `scale(${lerp(1.0, 1.26, s1Out).toFixed(4)}) translateY(${lerp(0, -24, s1Out).toFixed(1)}px)`;
         scene1.classList.toggle('interactive', s1Op > 0.25);
 
-        // SLIDE 2: Real Shoes Video Scrub (0.11 -> 0.39)
+        // SLIDE 2: Auto-playing Shoes Clip (0.11 -> 0.39)
         const s2In = smoothstep(0.11, 0.19, p);
         const s2Out = smoothstep(0.32, 0.39, p);
         const s2Op = s2In * (1 - s2Out);
         scene2.style.opacity = s2Op.toFixed(3);
+        scene2.classList.toggle('interactive', s2Op > 0.25);
 
-        const videoProg = smoothstep(0.14, 0.31, p);
-        if (s2Op > 0.01) {
-          drawShoeFrame(videoProg);
+        if (p < 0.08) {
+          clipState = 'idle';
+          clipProgress = 0;
+          drawShoeFrame(0);
+        } else if (s2Op > 0.2 && clipState === 'idle') {
+          clipState = 'playing';
+          clipStartTime = performance.now();
         }
-        shoeWrap.style.transform = `scale(${(lerp(0.88, 1.08, videoProg) * lerp(1.0, 0.92, s2Out)).toFixed(4)})`;
-        scene2Text.style.transform = `scale(${lerp(0.92, 1.02, videoProg).toFixed(4)}) translateY(${lerp(12, 0, videoProg).toFixed(1)}px)`;
 
-        const matchOp = smoothstep(0.27, 0.31, p) * (1 - s2Out);
+        if (clipState === 'playing') {
+          clipProgress = clamp01((performance.now() - clipStartTime) / CLIP_DURATION_MS);
+          if (clipProgress >= 1) {
+            clipState = 'done';
+          }
+        }
+
+        if (s2Op > 0.01) {
+          drawShoeFrame(clipProgress);
+        }
+
+        const scaleProg = smoothstep(0, 1, clipProgress);
+        shoeWrap.style.transform = `scale(${(lerp(0.92, 1.06, scaleProg) * lerp(1.0, 0.92, s2Out)).toFixed(4)})`;
+        scene2Text.style.transform = `scale(${lerp(0.94, 1.02, s2In).toFixed(4)}) translateY(${lerp(12, 0, s2In).toFixed(1)}px)`;
+
+        const matchOp = smoothstep(0.84, 1.0, clipProgress) * (1 - s2Out);
         matchBadge.style.opacity = matchOp.toFixed(3);
         matchBadge.style.transform = `translateY(${lerp(12, 0, matchOp).toFixed(1)}px)`;
 
